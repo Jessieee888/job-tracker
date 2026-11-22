@@ -38,10 +38,8 @@ const categories: Category[] = [
 
 const tabs: Filter[] = ["All", ...categories];
 
-// Kategori yang TIDAK ikut muncul di "Show all"
 const hiddenFromAll: Category[] = ["Applied"];
 
-// Batas skor (silakan ubah)
 const PRIORITIZE_MIN = 75;
 const STILL_APPLY_MIN = 50;
 
@@ -185,7 +183,7 @@ export default function Home() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             pattern="https?://.+"
-            title="Link harus diawali http:// atau https://"
+            title="Link must start with http:// or https://"
             required
           />
         </div>

@@ -17,6 +17,7 @@ type Application = {
   status: Status;
   date: string;
   description: string;
+  url: string;
 } & Scoring;
 
 type Category =
@@ -62,6 +63,7 @@ const initialApplications: Application[] = [
     description: "Contoh job description. Looking for a data intern with Python and SQL skills.",
     matchScore: 85,
     matchDetails: "Strong match: Python, SQL, and data analysis all appear in your resume.",
+    url: "https://example.com/job1",
   },
   {
     id: 2,
@@ -72,6 +74,7 @@ const initialApplications: Application[] = [
     description: "Contoh job description. Build web features using React and Node.js.",
     matchScore: 60,
     matchDetails: "Partial match: web skills are relevant, but React is missing from your resume.",
+    url: "https://example.com/job2",
   },
   {
     id: 3,
@@ -82,6 +85,7 @@ const initialApplications: Application[] = [
     description: "Contoh job description. Build native iOS apps with Swift.",
     matchScore: 30,
     matchDetails: "Weak match: the role needs Swift and iOS experience, which you don't list.",
+    url: "https://example.com/job3",
   },
   {
     id: 4,
@@ -92,6 +96,7 @@ const initialApplications: Application[] = [
     description: "Contoh job description. Train and evaluate machine learning models.",
     matchScore: null,
     matchDetails: null,
+    url: "https://example.com/job4",
   },
   {
     id: 5,
@@ -102,6 +107,7 @@ const initialApplications: Application[] = [
     description: "Contoh job description. Analyse datasets and build dashboards.",
     matchScore: 80,
     matchDetails: "Strong match: your data analysis and Python skills fit this role well.",
+    url: "https://example.com/job5",
   },
 ];
 
@@ -111,10 +117,12 @@ export default function Home() {
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [description, setDescription] = useState("");
+  const [url, setUrl] = useState("");
 
   function handleAdd(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!company.trim() || !role.trim() || !description.trim()) return;
+    if (!company.trim() || !role.trim() || !description.trim() || !url.trim()) return;
+    if (!/^https?:\/\//i.test(url.trim())) return; 
 
     const newApp: Application = {
       id: Date.now(),
@@ -125,12 +133,14 @@ export default function Home() {
       description: description.trim(),
       matchScore: null,
       matchDetails: null,
+      url: url.trim(),
     };
 
     setApplications([newApp, ...applications]);
     setCompany("");
     setRole("");
     setDescription("");
+    setUrl("");
   }
 
   function updateStatus(id: number, status: Status) {
@@ -166,6 +176,16 @@ export default function Home() {
             placeholder="Role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
+            required
+          />
+          <input
+            className="border rounded px-3 py-2"
+            type="url"
+            placeholder="Apply link (https://...)"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            pattern="https?://.+"
+            title="Link harus diawali http:// atau https://"
             required
           />
         </div>
@@ -250,6 +270,15 @@ export default function Home() {
                 <p className="mt-2 text-sm whitespace-pre-wrap">{app.matchDetails}</p>
               </details>
             )}
+
+            <a
+              href={app.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-3 text-sm font-medium text-blue-600 underline"
+            >
+              Visit link
+            </a>
           </li>
         ))}
       </ul>

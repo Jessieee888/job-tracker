@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 
-type Status = "Applied" | "Interview" | "Offer" | "Rejected";
+type Status = "To apply" | "Applied" | "Interview" | "Offer" | "Rejected";
 
+const statuses: Status[] = ["To apply", "Applied", "Interview", "Offer", "Rejected"];
+
+// Aturan: skor dan detail selalu sepaket.
 type Scoring =
   | { matchScore: null; matchDetails: null }
   | { matchScore: number; matchDetails: string };
@@ -17,7 +20,12 @@ type Application = {
   description: string;
 } & Scoring;
 
-type Category = "Prioritize" | "Still apply" | "Only if you're free" | "Unscored";
+type Category =
+  | "Prioritize"
+  | "Still apply"
+  | "Only if you're free"
+  | "Unscored"
+  | "Applied";
 type Filter = "All" | Category;
 
 const categories: Category[] = [
@@ -25,14 +33,22 @@ const categories: Category[] = [
   "Still apply",
   "Only if you're free",
   "Unscored",
+  "Applied",
 ];
 
 const tabs: Filter[] = ["All", ...categories];
 
+// Kategori yang TIDAK ikut muncul di "Show all"
+const hiddenFromAll: Category[] = ["Applied"];
+
+// Batas skor (silakan ubah)
 const PRIORITIZE_MIN = 75;
 const STILL_APPLY_MIN = 50;
 
 function getCategory(app: Application): Category {
+  if (app.status !== "To apply") return "Applied";
+
+  // Sisanya (belum dilamar) dikategorikan dari skor
   if (app.matchScore === null) return "Unscored";
   if (app.matchScore >= PRIORITIZE_MIN) return "Prioritize";
   if (app.matchScore >= STILL_APPLY_MIN) return "Still apply";
@@ -44,7 +60,7 @@ const initialApplications: Application[] = [
     id: 1,
     company: "Contoh Corp",
     role: "Data Intern",
-    status: "Applied",
+    status: "To apply",
     date: "2026-11-20",
     description: "Contoh job description. Looking for a data intern with Python and SQL skills.",
     matchScore: 85,
@@ -54,7 +70,7 @@ const initialApplications: Application[] = [
     id: 2,
     company: "Startup Keren",
     role: "Junior Developer",
-    status: "Interview",
+    status: "To apply",
     date: "2026-11-15",
     description: "Contoh job description. Build web features using React and Node.js.",
     matchScore: 60,
@@ -64,7 +80,7 @@ const initialApplications: Application[] = [
     id: 3,
     company: "Big Tech",
     role: "Mobile Engineer",
-    status: "Applied",
+    status: "To apply",
     date: "2026-11-01",
     description: "Contoh job description. Build native iOS apps with Swift.",
     matchScore: 30,
@@ -74,11 +90,21 @@ const initialApplications: Application[] = [
     id: 4,
     company: "Baru Banget Inc",
     role: "ML Intern",
-    status: "Applied",
+    status: "To apply",
     date: "2026-11-22",
     description: "Contoh job description. Train and evaluate machine learning models.",
     matchScore: null,
     matchDetails: null,
+  },
+  {
+    id: 5,
+    company: "Data Co",
+    role: "Data Analyst Intern",
+    status: "Applied",
+    date: "2026-11-10",
+    description: "Contoh job description. Analyse datasets and build dashboards.",
+    matchScore: 80,
+    matchDetails: "Strong match: your data analysis and Python skills fit this role well.",
   },
 ];
 
@@ -97,7 +123,7 @@ export default function Home() {
       id: Date.now(),
       company: company.trim(),
       role: role.trim(),
-      status: "Applied",
+      status: "To apply",
       date: new Date().toISOString().slice(0, 10),
       description: description.trim(),
       matchScore: null,
@@ -109,16 +135,21 @@ export default function Home() {
     setRole("");
     setDescription("");
   }
- 
-  function countFor(tab: Filter) {
-    if (tab === "All") return applications.length;
-    return applications.filter((app) => getCategory(app) === tab).length;
+
+  function updateStatus(id: number, status: Status) {
+    setApplications(
+      applications.map((app) => (app.id === id ? { ...app, status } : app))
+    );
   }
 
-  const visibleApplications =
-    filter === "All"
-      ? applications
-      : applications.filter((app) => getCategory(app) === filter);
+  function appsFor(tab: Filter) {
+    if (tab === "All") {
+      return applications.filter((app) => !hiddenFromAll.includes(getCategory(app)));
+    }
+    return applications.filter((app) => getCategory(app) === tab);
+  }
+
+  const visibleApplications = appsFor(filter);
 
   return (
     <main className="p-8 max-w-3xl mx-auto">
@@ -163,7 +194,7 @@ export default function Home() {
               filter === tab ? "bg-blue-600 text-white border-blue-600" : ""
             }`}
           >
-            {tab === "All" ? "Show all" : tab} ({countFor(tab)})
+            {tab === "All" ? "Show all" : tab} ({appsFor(tab).length})
           </button>
         ))}
       </div>
@@ -181,7 +212,25 @@ export default function Home() {
                 {getCategory(app)}
               </span>
             </div>
-            <p className="text-sm text-gray-500">{app.status} &bull; {app.date}</p>
+
+            <div className="flex items-center gap-2 mt-1">
+              <select
+                className="border rounded px-2 py-1 text-sm bg-white text-black dark:bg-zinc-800 dark:text-white"
+                value={app.status}
+                onChange={(e) => updateStatus(app.id, e.target.value as Status)}
+              >
+                {statuses.map((s) => (
+                  <option
+                    key={s}
+                    value={s}
+                    className="bg-white text-black dark:bg-zinc-800 dark:text-white"
+                  >
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-500">&bull; {app.date}</span>
+            </div>
 
             {app.matchScore !== null ? (
               <p className="text-sm font-medium mt-1">Match score: {app.matchScore}/100</p>

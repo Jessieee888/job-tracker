@@ -6,7 +6,6 @@ type Status = "To apply" | "Applied" | "Interview" | "Offer" | "Rejected";
 
 const statuses: Status[] = ["To apply", "Applied", "Interview", "Offer", "Rejected"];
 
-// Aturan: skor dan detail selalu sepaket.
 type Scoring =
   | { matchScore: null; matchDetails: null }
   | { matchScore: number; matchDetails: string };
@@ -47,8 +46,6 @@ const STILL_APPLY_MIN = 50;
 
 function getCategory(app: Application): Category {
   if (app.status !== "To apply") return "Applied";
-
-  // Sisanya (belum dilamar) dikategorikan dari skor
   if (app.matchScore === null) return "Unscored";
   if (app.matchScore >= PRIORITIZE_MIN) return "Prioritize";
   if (app.matchScore >= STILL_APPLY_MIN) return "Still apply";

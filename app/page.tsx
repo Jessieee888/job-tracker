@@ -1,24 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
-type Status = "To apply" | "Applied" | "Interview" | "Offer" | "Rejected";
-
-const statuses: Status[] = ["To apply", "Applied", "Interview", "Offer", "Rejected"];
-
-type Scoring =
-  | { matchScore: null; matchDetails: null }
-  | { matchScore: number; matchDetails: string };
-
-type Application = {
-  id: number;
-  company: string;
-  role: string;
-  status: Status;
-  date: string;
-  description: string;
-  url: string;
-} & Scoring;
+import { useEffect, useState } from "react";
+import { statuses, type Application, type Status } from "@/lib/types";
 
 type Category =
   | "Prioritize"
@@ -51,100 +34,95 @@ function getCategory(app: Application): Category {
   return "Only if you're free";
 }
 
-const initialApplications: Application[] = [
-  {
-    id: 1,
-    company: "Contoh Corp",
-    role: "Data Intern",
-    status: "To apply",
-    date: "2026-11-20",
-    description: "Contoh job description. Looking for a data intern with Python and SQL skills.",
-    matchScore: 85,
-    matchDetails: "Strong match: Python, SQL, and data analysis all appear in your resume.",
-    url: "https://example.com/job1",
-  },
-  {
-    id: 2,
-    company: "Startup Keren",
-    role: "Junior Developer",
-    status: "To apply",
-    date: "2026-11-15",
-    description: "Contoh job description. Build web features using React and Node.js.",
-    matchScore: 60,
-    matchDetails: "Partial match: web skills are relevant, but React is missing from your resume.",
-    url: "https://example.com/job2",
-  },
-  {
-    id: 3,
-    company: "Big Tech",
-    role: "Mobile Engineer",
-    status: "To apply",
-    date: "2026-11-01",
-    description: "Contoh job description. Build native iOS apps with Swift.",
-    matchScore: 30,
-    matchDetails: "Weak match: the role needs Swift and iOS experience, which you don't list.",
-    url: "https://example.com/job3",
-  },
-  {
-    id: 4,
-    company: "Baru Banget Inc",
-    role: "ML Intern",
-    status: "To apply",
-    date: "2026-11-22",
-    description: "Contoh job description. Train and evaluate machine learning models.",
-    matchScore: null,
-    matchDetails: null,
-    url: "https://example.com/job4",
-  },
-  {
-    id: 5,
-    company: "Data Co",
-    role: "Data Analyst Intern",
-    status: "Applied",
-    date: "2026-11-10",
-    description: "Contoh job description. Analyse datasets and build dashboards.",
-    matchScore: 80,
-    matchDetails: "Strong match: your data analysis and Python skills fit this role well.",
-    url: "https://example.com/job5",
-  },
-];
+function errorMessage(err: unknown) {
+  return err instanceof Error ? err.message : "Something went wrong";
+}
 
 export default function Home() {
-  const [applications, setApplications] = useState<Application[]>(initialApplications);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<Filter>("All");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
 
-  function handleAdd(e: React.SubmitEvent<HTMLFormElement>) {
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/applications")
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to load applications");
+        if (!cancelled) setApplications(data.applications);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setLoadError(errorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleAdd(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!company.trim() || !role.trim() || !description.trim() || !url.trim()) return;
-    if (!/^https?:\/\//i.test(url.trim())) return; 
+    if (!/^https?:\/\//i.test(url.trim())) return;
 
-    const newApp: Application = {
-      id: Date.now(),
-      company: company.trim(),
-      role: role.trim(),
-      status: "To apply",
-      date: new Date().toISOString().slice(0, 10),
-      description: description.trim(),
-      matchScore: null,
-      matchDetails: null,
-      url: url.trim(),
-    };
+    setSaving(true);
+    setActionError(null);
 
-    setApplications([newApp, ...applications]);
-    setCompany("");
-    setRole("");
-    setDescription("");
-    setUrl("");
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company: company.trim(),
+          role: role.trim(),
+          description: description.trim(),
+          url: url.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to save application");
+
+      setApplications((current) => [data.application, ...current]);
+      setCompany("");
+      setRole("");
+      setDescription("");
+      setUrl("");
+    } catch (err) {
+      setActionError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function updateStatus(id: number, status: Status) {
-    setApplications(
-      applications.map((app) => (app.id === id ? { ...app, status } : app))
-    );
+  async function updateStatus(id: number, status: Status) {
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to update status");
+
+      setApplications((current) =>
+        current.map((app) => (app.id === id ? data.application : app))
+      );
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
   }
 
   function appsFor(tab: Filter) {
@@ -194,10 +172,16 @@ export default function Home() {
           onChange={(e) => setDescription(e.target.value)}
           required
         />
-        <button type="submit" className="border rounded px-4 py-2 font-semibold">
-          Add
+        <button
+          type="submit"
+          disabled={saving}
+          className="border rounded px-4 py-2 font-semibold disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Add"}
         </button>
       </form>
+
+      {actionError && <p className="text-red-600 mb-4">{actionError}</p>}
 
       <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map((tab) => (
@@ -214,7 +198,9 @@ export default function Home() {
         ))}
       </div>
 
-      {visibleApplications.length === 0 && (
+      {loading && <p className="text-gray-500">Loading...</p>}
+      {loadError && <p className="text-red-600">{loadError}</p>}
+      {!loading && !loadError && visibleApplications.length === 0 && (
         <p className="text-gray-500">No applications in this category.</p>
       )}
 

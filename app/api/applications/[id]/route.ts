@@ -1,4 +1,4 @@
-import { updateApplicationStatus } from "@/lib/applications";
+import { deleteApplication, updateApplicationStatus } from "@/lib/applications";
 import { statuses, type Status } from "@/lib/types";
 
 export async function PATCH(
@@ -32,5 +32,27 @@ export async function PATCH(
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Failed to update application" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: rawId } = await params;
+  const id = Number(rawId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return Response.json({ error: "Invalid id" }, { status: 400 });
+  }
+
+  try {
+    const deleted = await deleteApplication(id);
+    if (!deleted) {
+      return Response.json({ error: "Application not found" }, { status: 404 });
+    }
+    return Response.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return Response.json({ error: "Failed to delete application" }, { status: 500 });
   }
 }

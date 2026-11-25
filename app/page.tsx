@@ -125,6 +125,22 @@ export default function Home() {
     }
   }
 
+  async function handleDelete(id: number) {
+    if (!window.confirm("Delete this application? This cannot be undone.")) return;
+
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/applications/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to delete application");
+
+      setApplications((current) => current.filter((app) => app.id !== id));
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  }
+
   function appsFor(tab: Filter) {
     if (tab === "All") {
       return applications.filter((app) => !hiddenFromAll.includes(getCategory(app)));
@@ -255,14 +271,23 @@ export default function Home() {
               </details>
             )}
 
-            <a
-              href={app.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block mt-3 text-sm font-medium text-blue-600 underline"
-            >
-              Visit link
-            </a>
+            <div className="flex items-center gap-4 mt-3">
+              <a
+                href={app.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-blue-600 underline"
+              >
+                Visit link
+              </a>
+              <button
+                type="button"
+                onClick={() => handleDelete(app.id)}
+                className="text-sm text-red-600 underline"
+              >
+                Delete
+              </button>
+            </div>
           </li>
         ))}
       </ul>

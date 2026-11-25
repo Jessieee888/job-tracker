@@ -116,3 +116,15 @@ export async function saveMatchResult(
   if (error) throw new Error(error.message);
   return data ? toApplication(data as unknown as ApplicationRow) : null;
 }
+
+export async function deleteApplication(id: number): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("applications")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data !== null;
+}

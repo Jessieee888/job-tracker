@@ -15,3 +15,9 @@ export type Application = {
   description: string;
   url: string;
 } & Scoring;
+
+export type Resume = {
+  content: string;
+  specialRequest: string;
+  updatedAt: string;
+};
